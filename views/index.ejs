@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Bluebell Coffee</title>
+  <link rel="stylesheet" href="/style.css"/>
+</head>
+<body>
+
+  <h1>Bluebell Coffee</h1>
+  <h3>Where Every Cup Blooms</h3>
+
+  <nav>
+    <a href="/">Home</a>
+    <a href="/drinks">Menu</a>
+    <a href="/search">Search</a>
+  </nav>
+
+  <div class="controls">
+    <input type="text" id="searchInput" placeholder="🔍 Search by name..."/>
+    <select id="sortSelect">
+      <option value="">Sort By</option>
+      <option value="nameAsc">Name A–Z</option>
+      <option value="nameDesc">Name Z–A</option>
+      <option value="idAsc">ID Ascending</option>
+      <option value="idDesc">ID Descending</option>
+    </select>
+    <button id="resetBtn">✕ Reset</button>
+  </div>
+
+  <div id="dashboard">
+    <p id="totalItems"></p>
+    <p id="categoryName">Category: Coffee / Tea</p>
+  </div>
+
+  <p id="count"></p>
+  <div class="cards" id="cards"></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
