@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Menu – Bluebell Coffee</title>
+  <link rel="stylesheet" href="/style.css"/>
+</head>
+<body>
+
+  <h1>Bluebell Coffee</h1>
+  <h3>Where Every Cup Blooms</h3>
+
+  <nav>
+    <a href="/">Home</a>
+    <a href="/drinks">Menu</a>
+    <a href="/search">Search</a>
+  </nav>
+
+  <div class="controls">
+    <% categories.forEach(cat => { %>
+      <a href="/drinks?category=<%= encodeURIComponent(cat) %>"
+         style="padding:10px 16px; background:<%= selectedCategory===cat ? '#1a2d4a' : '#2e5090' %>; color:white; border-radius:8px; text-decoration:none; font-size:14px;">
+        <%= cat %>
+      </a>
+    <% }) %>
+    <a href="/drinks"
+       style="padding:10px 16px; background:<%= selectedCategory==='all' ? '#1a2d4a' : '#6b9bd2' %>; color:white; border-radius:8px; text-decoration:none; font-size:14px;">
+      All
+    </a>
+  </div>
+
+  <div id="dashboard">
+    <p>Showing <%= drinks.length %> orders</p>
+    <p>Category: <%= selectedCategory === 'all' ? 'All' : selectedCategory %></p>
+  </div>
+
+  <% if (drinks.length === 0) { %>
+    <div class="no-results"><p>No orders found in this category.</p></div>
+  <% } else { %>
+    <table>
+      <tr>
+        <th>Order ID</th>
+        <th>Item Name</th>
+        <th>Category</th>
+        <th>Size</th>
+        <th>Price</th>
+        <th>Type</th>
+        <th>Ingredients</th>
+      </tr>
+      <% drinks.forEach(drink => { %>
+      <tr>
+        <td><%= drink.order_id %></td>
+        <td><strong><%= drink.name %></strong></td>
+        <td><%= drink.category %></td>
+        <td><%= drink.size %></td>
+        <td>$<%= drink.price.toFixed(2) %></td>
+        <td><%= drink.order_type %></td>
+        <td><%= drink.ingredients.join(', ') || 'N/A' %></td>
+      </tr>
+      <% }) %>
+    </table>
+  <% } %>
+
+</body>
+</html>
