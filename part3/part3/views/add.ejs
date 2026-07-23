@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Add Drink – Bluebell Coffee</title>
+  <link rel="stylesheet" href="/style.css"/>
+</head>
+<body>
+
+  <h1>Bluebell Coffee</h1>
+  <h3>Add a New Menu Item</h3>
+
+  <nav>
+    <a href="/">Home</a>
+    <a href="/drinks">Menu</a>
+    <a href="/search">Search</a>
+    <a href="/drinks/add">+ Add Drink</a>
+  </nav>
+
+  <% if (errors.length > 0) { %>
+    <div style="background:#fdecea; border:1px solid #e08585; color:#8a2020; padding:12px 16px; border-radius:8px; margin-bottom:16px;">
+      <strong>Please fix the following:</strong>
+      <ul style="margin:8px 0 0 20px;">
+        <% errors.forEach(e => { %><li><%= e %></li><% }) %>
+      </ul>
+    </div>
+  <% } %>
+
+  <form method="POST" action="/drinks/add" style="display:grid; gap:14px; max-width:520px; background:white; padding:24px; border-radius:12px;">
+
+    <label>Drink Name *
+      <input type="text" name="name" value="<%= values.name || '' %>" placeholder="e.g. Lavender Latte" style="width:100%;"/>
+    </label>
+
+    <label>Category *
+      <select name="category" style="width:100%;">
+        <option value="">-- Select category --</option>
+        <% categories.forEach(c => { %>
+          <option value="<%= c %>" <%= values.category === c ? 'selected' : '' %>><%= c %></option>
+        <% }) %>
+      </select>
+    </label>
+
+    <label>Size
+      <select name="size" style="width:100%;">
+        <% ['N/A','Small','Medium','Large'].forEach(s => { %>
+          <option value="<%= s %>" <%= values.size === s ? 'selected' : '' %>><%= s %></option>
+        <% }) %>
+      </select>
+    </label>
+
+    <label>Price ($) *
+      <input type="number" name="price" step="0.01" min="0" value="<%= values.price || '' %>" placeholder="e.g. 4.50" style="width:100%;"/>
+    </label>
+
+    <label>Quantity *
+      <input type="number" name="quantity" step="1" min="1" value="<%= values.quantity || 1 %>" style="width:100%;"/>
+    </label>
+
+    <label>Order Type *
+      <select name="order_type" style="width:100%;">
+        <option value="">-- Select type --</option>
+        <% orderTypes.forEach(t => { %>
+          <option value="<%= t %>" <%= values.order_type === t ? 'selected' : '' %>><%= t %></option>
+        <% }) %>
+      </select>
+    </label>
+
+    <label>SKU
+      <input type="text" name="sku" value="<%= values.sku || '' %>" placeholder="e.g. HDR-LAV" style="width:100%;"/>
+    </label>
+
+    <label>Customer
+      <input type="text" name="customer" value="<%= values.customer || '' %>" placeholder="e.g. Alex" style="width:100%;"/>
+    </label>
+
+    <label>Popularity
+      <input type="number" name="popularity" step="1" min="0" value="<%= values.popularity || 0 %>" style="width:100%;"/>
+    </label>
+
+    <label>Ingredients (comma-separated)
+      <input type="text" name="ingredients" value="<%= values.ingredients || '' %>" placeholder="e.g. Espresso beans, Milk, Lavender syrup" style="width:100%;"/>
+    </label>
+
+    <button type="submit" style="padding:12px; background:#2e5090; color:white; border:none; border-radius:8px; font-size:15px; cursor:pointer;">
+      Add to Menu
+    </button>
+  </form>
+
+</body>
+</html>

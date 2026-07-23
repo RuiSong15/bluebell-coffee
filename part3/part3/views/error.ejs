@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title><%= title %> – Bluebell Coffee</title>
+  <link rel="stylesheet" href="/style.css"/>
+</head>
+<body>
+
+  <h1>Bluebell Coffee</h1>
+  <h3><%= title %></h3>
+
+  <nav>
+    <a href="/">Home</a>
+    <a href="/drinks">Menu</a>
+    <a href="/search">Search</a>
+  </nav>
+
+  <div class="no-results" style="background:white; padding:24px; border-radius:12px;">
+    <p><%= message %></p>
+    <p style="margin-top:12px;"><a href="/drinks" style="color:#2e5090;">← Back to Menu</a></p>
+  </div>
+
+</body>
+</html>
