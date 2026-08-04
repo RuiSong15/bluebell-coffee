@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Dashboard – Bluebell Coffee</title>
+  <link rel="stylesheet" href="/style.css"/>
+</head>
+<body>
+
+  <h1>🫐 Bluebell Coffee</h1>
+  <h3>Staff Dashboard</h3>
+
+  <%- include('partials/nav') %>
+
+  <div style="background:white; padding:20px 24px; border-radius:12px; margin-bottom:20px;">
+    <p style="font-size:15px;">
+      Signed in as <strong><%= currentUser.name %></strong>
+      <span class="chip chip-<%= currentUser.role === 'admin' ? 'hot-drinks' : 'tea' %>" style="margin-left:8px;">
+        <%= currentUser.role %>
+      </span>
+    </p>
+    <p style="font-size:13px; color:#6b7a8d; margin-top:8px;">
+      <% if (currentUser.role === 'admin') { %>
+        You have administrator access: you can add, edit, and remove menu records.
+      <% } else { %>
+        You have viewer access: you can browse and search the menu. Adding, editing,
+        and removing records requires an administrator account.
+      <% } %>
+    </p>
+  </div>
+
+  <div id="dashboard">
+    <p><strong><%= totalDrinks %></strong> records in the database</p>
+    <p><strong><%= categories.length %></strong> categories</p>
+  </div>
+
+  <table>
+    <tr><th>Category</th><th>Records</th><th>Average Price</th></tr>
+    <% categories.forEach(c => { %>
+      <tr>
+        <td><%= c.category %></td>
+        <td><%= c.count %></td>
+        <td>$<%= Number(c.avg_price).toFixed(2) %></td>
+      </tr>
+    <% }) %>
+  </table>
+
+  <h3 style="margin-top:28px;">Most Recent Records</h3>
+  <table>
+    <tr><th>ID</th><th>Name</th><th>Category</th><th>Price</th><% if (currentUser.role === 'admin') { %><th>Actions</th><% } %></tr>
+    <% recent.forEach(d => { %>
+      <tr>
+        <td><%= d.id %></td>
+        <td><strong><%= d.name %></strong></td>
+        <td><%= d.category %></td>
+        <td>$<%= d.price.toFixed(2) %></td>
+        <% if (currentUser.role === 'admin') { %>
+          <td style="white-space:nowrap;">
+            <a href="/admin/drinks/<%= d.id %>/edit"
+               style="padding:4px 10px; background:#2e5090; color:white; border-radius:6px; text-decoration:none; font-size:12px;">Edit</a>
+          </td>
+        <% } %>
+      </tr>
+    <% }) %>
+  </table>
+
+</body>
+</html>

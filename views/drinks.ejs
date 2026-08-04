@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Menu – Bluebell Coffee</title>
   <link rel="stylesheet" href="/style.css"/>
 </head>
@@ -10,11 +11,13 @@
   <h1>Bluebell Coffee</h1>
   <h3>Where Every Cup Blooms</h3>
 
-  <nav>
-    <a href="/">Home</a>
-    <a href="/drinks">Menu</a>
-    <a href="/search">Search</a>
-  </nav>
+  <%- include('partials/nav') %>
+
+  <% if (message) { %>
+    <div style="background:#e6f4e6; border:1px solid #7ac47a; color:#256029; padding:12px 16px; border-radius:8px; margin-bottom:16px;">
+      <%= decodeURIComponent(message) %>
+    </div>
+  <% } %>
 
   <div class="controls">
     <% categories.forEach(cat => { %>
@@ -30,32 +33,48 @@
   </div>
 
   <div id="dashboard">
-    <p>Showing <%= drinks.length %> orders</p>
+    <p>Showing <%= drinks.length %> records (from Neon PostgreSQL)</p>
     <p>Category: <%= selectedCategory === 'all' ? 'All' : selectedCategory %></p>
   </div>
 
   <% if (drinks.length === 0) { %>
-    <div class="no-results"><p>No orders found in this category.</p></div>
+    <div class="no-results"><p>No records found in this category.</p></div>
   <% } else { %>
+    <% const slugify = n => n.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); %>
+    <% const isAdmin = currentUser && currentUser.role === 'admin'; %>
     <table>
       <tr>
-        <th>Order ID</th>
+        <th>ID</th>
+        <th></th>
         <th>Item Name</th>
         <th>Category</th>
         <th>Size</th>
         <th>Price</th>
         <th>Type</th>
         <th>Ingredients</th>
+        <% if (isAdmin) { %><th>Actions</th><% } %>
       </tr>
       <% drinks.forEach(drink => { %>
       <tr>
-        <td><%= drink.order_id %></td>
+        <td><%= drink.id %></td>
+        <td><img class="thumb" src="/images/<%= slugify(drink.name) %>.svg" alt="" onerror="this.style.display='none'"/></td>
         <td><strong><%= drink.name %></strong></td>
         <td><%= drink.category %></td>
         <td><%= drink.size %></td>
         <td>$<%= drink.price.toFixed(2) %></td>
         <td><%= drink.order_type %></td>
-        <td><%= drink.ingredients.join(', ') || 'N/A' %></td>
+        <td><%= (drink.ingredients || []).join(', ') || 'N/A' %></td>
+        <% if (isAdmin) { %>
+        <td style="white-space:nowrap;">
+          <a href="/admin/drinks/<%= drink.id %>/edit"
+             style="padding:4px 10px; background:#2e5090; color:white; border-radius:6px; text-decoration:none; font-size:12px;">Edit</a>
+          <form method="POST" action="/admin/drinks/<%= drink.id %>/delete" style="display:inline;"
+                onsubmit="return confirm('Remove &quot;<%= drink.name %>&quot; (ID <%= drink.id %>) from the menu? This cannot be undone.');">
+            <button type="submit"
+                    style="padding:4px 10px; background:#b23b3b; color:white; border:none; border-radius:6px; font-size:12px; cursor:pointer;">Delete</button>
+          </form>
+        </td>
+        <% } %>
       </tr>
       <% }) %>
     </table>

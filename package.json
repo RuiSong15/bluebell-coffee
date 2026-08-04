@@ -1,17 +1,23 @@
 {
   "name": "bluebell-coffee",
-  "version": "3.0.0",
-  "description": "Bluebell Coffee Shop - WEB700 Project Part 3 (PostgreSQL + Sequelize + Vercel)",
+  "version": "4.0.0",
+  "description": "Bluebell Coffee Shop - WEB700 Project Part 4 (PostgreSQL + Sequelize + Authentication/Authorization + Vercel)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "seed": "node scripts/seed.js"
+    "seed": "node scripts/seed.js",
+    "seed:users": "node scripts/seed-users.js",
+    "check": "node scripts/check-db.js"
   },
   "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "connect-pg-simple": "^9.0.1",
     "dotenv": "^16.4.5",
     "ejs": "^3.1.9",
     "express": "^4.18.2",
+    "express-session": "^1.18.0",
+    "helmet": "^7.1.0",
     "pg": "^8.11.5",
     "pg-hstore": "^2.3.4",
     "sequelize": "^6.37.3"

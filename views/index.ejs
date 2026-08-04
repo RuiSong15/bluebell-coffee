@@ -2,35 +2,55 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Bluebell Coffee</title>
   <link rel="stylesheet" href="/style.css"/>
 </head>
 <body>
 
-  <h1>Bluebell Coffee</h1>
-  <h3>Where Every Cup Blooms</h3>
-
-  <nav>
-    <a href="/">Home</a>
-    <a href="/drinks">Menu</a>
-    <a href="/search">Search</a>
-  </nav>
+  <header class="hero">
+    <img src="/images/hero.svg" alt="" class="hero-bg"/>
+    <div class="hero-text">
+      <h1>🫐 Bluebell Coffee</h1>
+      <h3>Where Every Cup Blooms</h3>
+      <nav>
+        <a href="/">Home</a>
+        <a href="/drinks">Menu</a>
+        <a href="/search">Search</a>
+        <% if (currentUser) { %>
+          <a href="/dashboard">Dashboard</a>
+          <% if (currentUser.role === 'admin') { %>
+            <a href="/admin/drinks/new">+ Add Drink</a>
+          <% } %>
+          <form method="POST" action="/logout" style="display:inline;">
+            <button type="submit"
+                    style="padding:8px 16px; background:rgba(255,255,255,0.16); border:1px solid rgba(255,255,255,0.35); color:white; border-radius:8px; font-size:14px; cursor:pointer;">
+              Log out (<%= currentUser.name %>)
+            </button>
+          </form>
+        <% } else { %>
+          <a href="/login">Log In</a>
+        <% } %>
+      </nav>
+    </div>
+  </header>
 
   <div class="controls">
-    <input type="text" id="searchInput" placeholder="🔍 Search by name..."/>
+    <input type="text" id="searchInput" placeholder="🔍 Search drinks, categories, ingredients..."/>
     <select id="sortSelect">
       <option value="">Sort By</option>
       <option value="nameAsc">Name A–Z</option>
       <option value="nameDesc">Name Z–A</option>
-      <option value="idAsc">ID Ascending</option>
-      <option value="idDesc">ID Descending</option>
+      <option value="priceAsc">Price Low → High</option>
+      <option value="priceDesc">Price High → Low</option>
+      <option value="popDesc">Most Popular</option>
     </select>
     <button id="resetBtn">✕ Reset</button>
   </div>
 
   <div id="dashboard">
     <p id="totalItems"></p>
-    <p id="categoryName">Category: Coffee / Tea</p>
+    <p id="categoryName"></p>
   </div>
 
   <p id="count"></p>

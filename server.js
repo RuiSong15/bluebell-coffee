@@ -1,36 +1,70 @@
 // =============================================
 // Bluebell Coffee Shop – server.js
-// WEB700 Project Part 3
-// Data source: Neon PostgreSQL via Sequelize
-// (Part 2 local JSON is no longer used at runtime)
+// WEB700 Project Part 4
+// Part 3: PostgreSQL data layer through Sequelize.
+// Part 4: Helmet, bcrypt password hashing, Express Session,
+//         authentication middleware, authorization middleware,
+//         and protected CRUD routes.
 // =============================================
 
 require('dotenv').config();
 const express = require('express');
 const path    = require('path');
+const helmet  = require('helmet');
 const { Op }  = require('sequelize');
 
-const sequelize = require('./config/database');
-const Drink     = require('./models/Drink');
+const sequelize     = require('./config/database');
+const sessionConfig = require('./config/session');
+const Drink         = require('./models/Drink');
+const User          = require('./models/User');
+const { currentUser, requireLogin, requireAdmin, redirectIfLoggedIn } = require('./middleware/auth');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
+
+// Vercel terminates TLS in front of the app; trusting the proxy lets the
+// session cookie's `secure` flag work correctly behind HTTPS.
+app.set('trust proxy', 1);
 
 // EJS setup
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-// Middleware
+// ============================================
+// SECURITY MIDDLEWARE (applies to every route)
+// ============================================
+
+// Helmet sets protective HTTP response headers (CSP, X-Frame-Options,
+// X-Content-Type-Options, Referrer-Policy, HSTS, and others).
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      // Inline styles are used inside the EJS templates from Part 3
+      styleSrc:   ["'self'", "'unsafe-inline'"],
+      scriptSrc:  ["'self'"],
+      imgSrc:     ["'self'", 'data:'],
+      objectSrc:  ["'none'"],
+      frameAncestors: ["'none'"]
+    }
+  }
+}));
+
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+
+// Express Session — keeps the authenticated user's identity on the server
+app.use(sessionConfig);
+// Expose the logged-in user to all templates as `currentUser`
+app.use(currentUser);
 
 const CATEGORIES  = ['Hot Drinks', 'Cold Drinks', 'Tea', 'Bakery', 'Dessert'];
 const ORDER_TYPES = ['Takeout', 'Dine-in', 'Delivery'];
 
 // ---------- helpers ----------
 
-// Validate form input; returns { values, errors }
+// Validate drink form input; returns { values, errors }
 function validateDrinkForm(body) {
   const errors = [];
   const values = {
@@ -64,7 +98,7 @@ function validateDrinkForm(body) {
   return { values, errors, price, quantity, popularity };
 }
 
-// Parse and validate :id parameter; returns integer or null
+// Parse and validate an :id route parameter; returns a positive integer or null
 function parseId(raw) {
   const id = parseInt(raw, 10);
   return (Number.isInteger(id) && id > 0 && String(id) === String(raw)) ? id : null;
@@ -89,7 +123,7 @@ function buildRow(v) {
 }
 
 // ============================================
-// HTML / EJS ROUTES
+// PUBLIC ROUTES
 // ============================================
 
 // GET / — Home page (front-end fetches /api/drinks)
@@ -97,7 +131,7 @@ app.get('/', (req, res) => {
   res.render('index');
 });
 
-// GET /drinks — Menu page from PostgreSQL, with category filter
+// GET /drinks — Public menu page from PostgreSQL, with category filter
 app.get('/drinks', async (req, res, next) => {
   try {
     const category = req.query.category || 'all';
@@ -118,12 +152,12 @@ app.get('/drinks', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// GET /search — Show search form
+// GET /search — Public search form
 app.get('/search', (req, res) => {
   res.render('search', { results: [], error: null, keyword: '' });
 });
 
-// POST /search — Search PostgreSQL with validation
+// POST /search — Public search with validation
 app.post('/search', async (req, res, next) => {
   try {
     const keyword = req.body.keyword ? req.body.keyword.trim() : '';
@@ -145,16 +179,109 @@ app.post('/search', async (req, res, next) => {
 });
 
 // ============================================
-// CREATE — insert form (menu management)
+// AUTHENTICATION ROUTES (login / logout)
 // ============================================
 
-// GET /drinks/add — Show insert form
-app.get('/drinks/add', (req, res) => {
+// GET /login — Public login form
+app.get('/login', redirectIfLoggedIn, (req, res) => {
+  res.render('login', {
+    error: null,
+    email: '',
+    message: req.query.message || null
+  });
+});
+
+// POST /login — Validate credentials, then create the session
+app.post('/login', redirectIfLoggedIn, async (req, res, next) => {
+  const email    = (req.body.email || '').trim().toLowerCase();
+  const password = req.body.password || '';
+
+  // Deliberately generic so the response cannot be used to discover
+  // which email addresses exist in the database.
+  const GENERIC_ERROR = 'Invalid email or password.';
+
+  try {
+    // 1. Required fields must be present
+    if (!email || !password) {
+      return res.status(400).render('login', {
+        error: 'Email and password are both required.',
+        email,
+        message: null
+      });
+    }
+
+    // 2. Look the user up, including the hash (login is the only place that needs it)
+    const user = await User.scope('withPassword').findOne({ where: { email } });
+
+    // 3. Compare the submitted password with the stored bcrypt hash
+    const passwordMatches = user ? await user.verifyPassword(password) : false;
+
+    if (!user || !passwordMatches) {
+      return res.status(401).render('login', { error: GENERIC_ERROR, email, message: null });
+    }
+
+    // 4. Regenerate the session id on login (prevents session fixation)
+    const returnTo = req.session.returnTo;
+    req.session.regenerate(err => {
+      if (err) return next(err);
+
+      // 5. Store ONLY the identity and role — never the hash or the full record
+      req.session.user = { id: user.id, name: user.name, role: user.role };
+
+      req.session.save(saveErr => {
+        if (saveErr) return next(saveErr);
+        const target = returnTo && returnTo.startsWith('/') ? returnTo : '/dashboard';
+        res.redirect(target);
+      });
+    });
+  } catch (err) { next(err); }
+});
+
+// POST /logout — Destroy the session (authenticated users only)
+app.post('/logout', requireLogin, (req, res, next) => {
+  req.session.destroy(err => {
+    if (err) return next(err);
+    res.clearCookie('bluebell.sid');
+    res.redirect('/?message=' + encodeURIComponent('You have been logged out.'));
+  });
+});
+
+// ============================================
+// AUTHENTICATED ROUTES (any logged-in user)
+// ============================================
+
+// GET /dashboard — Requires authentication only (viewer or admin)
+app.get('/dashboard', requireLogin, async (req, res, next) => {
+  try {
+    const totalDrinks = await Drink.count();
+    const categories  = await Drink.findAll({
+      attributes: [
+        'category',
+        [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
+        [sequelize.fn('AVG', sequelize.col('price')), 'avg_price']
+      ],
+      group: ['category'],
+      order: [['category', 'ASC']],
+      raw: true
+    });
+    const recent = await Drink.findAll({ order: [['id', 'DESC']], limit: 5 });
+
+    res.render('dashboard', { totalDrinks, categories, recent });
+  } catch (err) { next(err); }
+});
+
+// ============================================
+// ADMIN-ONLY ROUTES (protected CRUD)
+// Every route below requires authentication AND the admin role.
+// ============================================
+
+// GET /admin/drinks/new — Insert form
+app.get('/admin/drinks/new', requireAdmin, (req, res) => {
   res.render('add', { errors: [], values: {}, categories: CATEGORIES, orderTypes: ORDER_TYPES });
 });
 
-// POST /drinks/add — Validate and insert a new record
-app.post('/drinks/add', async (req, res, next) => {
+// POST /admin/drinks — Validate and INSERT a new record
+app.post('/admin/drinks', requireAdmin, async (req, res, next) => {
   try {
     const v = validateDrinkForm(req.body);
     if (v.errors.length > 0) {
@@ -169,12 +296,8 @@ app.post('/drinks/add', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// ============================================
-// UPDATE — edit an existing menu record
-// ============================================
-
-// GET /drinks/:id/edit — Prepopulated edit form
-app.get('/drinks/:id/edit', async (req, res, next) => {
+// GET /admin/drinks/:id/edit — Prepopulated edit form
+app.get('/admin/drinks/:id/edit', requireAdmin, async (req, res, next) => {
   try {
     const id = parseId(req.params.id);
     if (id === null) return res.status(400).render('error', { title: 'Invalid ID', message: `"${req.params.id}" is not a valid record ID.` });
@@ -196,8 +319,8 @@ app.get('/drinks/:id/edit', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// POST /drinks/:id/edit — Validate and persist changes
-app.post('/drinks/:id/edit', async (req, res, next) => {
+// POST /admin/drinks/:id/update — Validate and UPDATE
+app.post('/admin/drinks/:id/update', requireAdmin, async (req, res, next) => {
   try {
     const id = parseId(req.params.id);
     if (id === null) return res.status(400).render('error', { title: 'Invalid ID', message: `"${req.params.id}" is not a valid record ID.` });
@@ -217,13 +340,8 @@ app.post('/drinks/:id/edit', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// ============================================
-// DELETE — remove a discontinued menu record
-// (UI confirmation happens in drinks.ejs via confirm())
-// ============================================
-
-// POST /drinks/:id/delete
-app.post('/drinks/:id/delete', async (req, res, next) => {
+// POST /admin/drinks/:id/delete — DELETE after the UI confirmation step
+app.post('/admin/drinks/:id/delete', requireAdmin, async (req, res, next) => {
   try {
     const id = parseId(req.params.id);
     if (id === null) return res.status(400).render('error', { title: 'Invalid ID', message: `"${req.params.id}" is not a valid record ID.` });
@@ -239,7 +357,7 @@ app.post('/drinks/:id/delete', async (req, res, next) => {
 });
 
 // ============================================
-// JSON / API ROUTES
+// JSON / API ROUTES (public read access)
 // ============================================
 
 // GET /api/drinks — All records from PostgreSQL
@@ -281,13 +399,26 @@ app.get('/api/drinks/:id', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// GET /api/me — Who am I? (authenticated users only; never returns a hash)
+app.get('/api/me', requireLogin, (req, res) => {
+  res.json({ user: req.session.user });
+});
+
 // GET /health — Confirm the app can reach the cloud database
 app.get('/health', async (req, res) => {
+  if (!sequelize.isConfigured) {
+    return res.status(503).json({
+      status: 'error',
+      database: 'not configured',
+      message: 'DATABASE_URL environment variable is not set on this deployment.'
+    });
+  }
   try {
     await sequelize.authenticate();
     const count = await Drink.count();
     res.json({ status: 'ok', database: 'connected', records: count });
   } catch (err) {
+    console.error('Health check failed:', err.message);
     res.status(503).json({ status: 'error', database: 'unreachable' });
   }
 });
@@ -304,7 +435,7 @@ app.use((req, res) => {
   res.status(404).render('error', { title: '404 – Page Not Found', message: `The page "${req.path}" does not exist.` });
 });
 
-// Central error handler — no stack traces or connection strings exposed
+// Central error handler — never exposes stack traces, SQL, or credentials
 app.use((err, req, res, next) => {
   console.error('Server error:', err.message);
   const isValidation = err.name === 'SequelizeValidationError';

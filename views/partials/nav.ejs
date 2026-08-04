@@ -1,0 +1,25 @@
+<%
+  // Shared navigation. Admin-only links are hidden from non-admins, but the
+  // server still enforces access with requireAdmin — hiding a link is not
+  // route protection on its own.
+%>
+<nav>
+  <a href="/">Home</a>
+  <a href="/drinks">Menu</a>
+  <a href="/search">Search</a>
+
+  <% if (currentUser) { %>
+    <a href="/dashboard">Dashboard</a>
+    <% if (currentUser.role === 'admin') { %>
+      <a href="/admin/drinks/new">+ Add Drink</a>
+    <% } %>
+    <form method="POST" action="/logout" style="display:inline;">
+      <button type="submit"
+              style="padding:8px 16px; background:#6b7a8d; color:white; border:none; border-radius:8px; font-size:14px; cursor:pointer;">
+        Log out (<%= currentUser.name %>)
+      </button>
+    </form>
+  <% } else { %>
+    <a href="/login">Log In</a>
+  <% } %>
+</nav>

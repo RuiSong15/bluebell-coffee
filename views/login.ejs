@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Log In – Bluebell Coffee</title>
+  <link rel="stylesheet" href="/style.css"/>
+</head>
+<body>
+
+  <h1>🫐 Bluebell Coffee</h1>
+  <h3>Staff Log In</h3>
+
+  <%- include('partials/nav') %>
+
+  <% if (message) { %>
+    <div style="background:#e6f0fb; border:1px solid #8fb4e0; color:#23456f; padding:12px 16px; border-radius:8px; margin-bottom:16px;">
+      <%= message %>
+    </div>
+  <% } %>
+
+  <% if (error) { %>
+    <div class="error"><%= error %></div>
+  <% } %>
+
+  <form method="POST" action="/login" style="display:grid; gap:14px; max-width:420px; background:white; padding:24px; border-radius:12px;">
+    <label>Email
+      <input type="email" name="email" value="<%= email %>" required autocomplete="username" style="width:100%;"/>
+    </label>
+
+    <label>Password
+      <input type="password" name="password" required autocomplete="current-password" style="width:100%;"/>
+    </label>
+
+    <button type="submit" style="padding:12px; background:#2e5090; color:white; border:none; border-radius:8px; font-size:15px; cursor:pointer;">
+      Log In
+    </button>
+  </form>
+
+  <p style="margin-top:16px; font-size:13px; color:#6b7a8d;">
+    Menu browsing and search are public. Logging in is required for the dashboard,
+    and administrator access is required to add, edit, or remove menu records.
+  </p>
+
+</body>
+</html>
